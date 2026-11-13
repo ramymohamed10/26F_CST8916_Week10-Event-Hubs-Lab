@@ -117,6 +117,7 @@
     #event-log .log-line span.ts  { color: #888; }
     #event-log .log-line span.evt { color: #ffd166; }
     #event-log .log-line span.ok  { color: #06d6a0; }
+    #event-log .log-line span.err { color: #ff8f8f; }
 
     /* ── Dashboard link ─────────────────────────────────────── */
     .dashboard-link {
@@ -151,7 +152,7 @@
 <!-- ── Hero banner ────────────────────────────────────────────── -->
 <div class="banner" id="hero-banner">
   <h2>Welcome to ShopStream</h2>
-  <p>Every click you make is streamed to Azure Event Hubs in real time.</p>
+  <p>Click a product to publish an event to Azure Event Hubs. Check the log below for confirmation.</p>
 </div>
 
 <!-- ── Product grid ───────────────────────────────────────────── -->
@@ -163,7 +164,7 @@
 
 <!-- ── Event log ──────────────────────────────────────────────── -->
 <div class="log-section">
-  <h3>Event Stream Log (what gets sent to Event Hubs)</h3>
+  <h3>Event Hubs Publish Log</h3>
   <div id="event-log"><span style="color:#888">Waiting for events...</span></div>
 </div>
 
@@ -239,13 +240,18 @@
       headers: { "Content-Type": "application/json" },
       body:    JSON.stringify(payload),
     })
-    .then(res => res.json())
-    .then(data => logEvent(payload, true))
-    .catch(err => logEvent(payload, false));
+    .then(async res => {
+      const data = await res.json();
+      if (!res.ok || data.status !== "published") {
+        throw new Error(data.error || "Publishing was not confirmed.");
+      }
+      logEvent(payload, true);
+    })
+    .catch(err => logEvent(payload, false, err.message));
   }
 
   // ── Append a line to the on-page event log ─────────────────────
-  function logEvent(payload, success) {
+  function logEvent(payload, success, errorMessage) {
     const log  = document.getElementById("event-log");
     const time = new Date().toISOString().slice(11, 23); // HH:MM:SS.mmm
     const line = document.createElement("div");
@@ -254,8 +260,13 @@
       `<span class="ts">[${time}]</span> ` +
       `<span class="evt">${payload.event_type}</span> ` +
       `${payload.page || ""}` +
-      (payload.product_id ? ` (${payload.product_id})` : "") +
-      ` <span class="${success ? "ok" : "err"}">${success ? "→ sent to Event Hubs" : "× send failed"}</span>`;
+      (payload.product_id ? ` (${payload.product_id})` : "");
+    const status = document.createElement("span");
+    status.className = success ? "ok" : "err";
+    status.textContent = success
+      ? " → published to Event Hubs"
+      : ` × publish not confirmed: ${errorMessage || "Check the connection and try again."}`;
+    line.appendChild(status);
     // Remove placeholder text on first real event
     if (log.querySelector("span[style]")) log.innerHTML = "";
     log.appendChild(line);

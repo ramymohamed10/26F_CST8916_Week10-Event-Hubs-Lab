@@ -33,14 +33,17 @@
       border-radius: 20px;
       padding: 4px 12px;
       font-size: 0.8rem;
-      color: #3fb950;
+      color: #e3b341;
     }
     .live-badge .dot {
       width: 8px; height: 8px;
-      background: #3fb950;
+      background: currentColor;
       border-radius: 50%;
       animation: pulse 1.4s infinite;
     }
+    .live-badge.receiving { color: #3fb950; }
+    .live-badge.error, .live-badge.stopped { color: #f85149; }
+    .consumer-status { padding: 16px 24px 0; color: #8b949e; font-size: 0.85rem; }
     @keyframes pulse {
       0%, 100% { opacity: 1; }
       50%       { opacity: 0.3; }
@@ -151,17 +154,18 @@
 <header>
   <h1>ShopStream – Live Analytics</h1>
   <div style="display:flex; align-items:center; gap:16px;">
-    <div class="live-badge"><div class="dot"></div> LIVE</div>
+    <div class="live-badge" id="consumer-badge"><div class="dot"></div><span id="consumer-label">CHECKING CONSUMER</span></div>
     <nav>
       <a href="/">← Back to Store</a>
     </nav>
   </div>
 </header>
+<p class="consumer-status" id="consumer-message" role="status" aria-live="polite">Checking Event Hubs consumer status…</p>
 
 <!-- ── KPI row ────────────────────────────────────────────────── -->
 <div class="kpi-row">
   <div class="kpi">
-    <div class="label">Total Events</div>
+    <div class="label">Recent Events (up to 50)</div>
     <div class="value" id="kpi-total">–</div>
   </div>
   <div class="kpi">
@@ -220,13 +224,32 @@
 
   function fetchAndRender() {
     fetch("/api/events?limit=50")
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error("Dashboard request failed.");
+        return res.json();
+      })
       .then(data => {
+        renderConsumerStatus(data.consumer);
         renderKPIs(data);
         renderBarChart(data.summary);
         renderFeed(data.events);
       })
-      .catch(err => console.error("Poll error:", err));
+      .catch(err => {
+        renderConsumerStatus({state: "error", message: "Unable to refresh the dashboard. Displayed events may be out of date."});
+        console.error("Poll error:", err);
+      });
+  }
+
+  function renderConsumerStatus(consumer) {
+    const labels = {waiting: "WAITING FOR EVENTS", receiving: "EVENTS RECEIVED", error: "CONSUMER ERROR", stopped: "CONSUMER STOPPED"};
+    const state = consumer?.state || "error";
+    document.getElementById("consumer-badge").className = `live-badge ${state}`;
+    document.getElementById("consumer-label").textContent = labels[state] || "STATUS UNAVAILABLE";
+    let message = consumer?.message || "Event Hubs consumer status is unavailable.";
+    if (consumer?.last_received_at) {
+      message += ` Last event received at ${new Date(consumer.last_received_at).toLocaleTimeString()}.`;
+    }
+    document.getElementById("consumer-message").textContent = message;
   }
 
   // ── KPI cards ────────────────────────────────────────────────
@@ -240,7 +263,10 @@
   // ── Bar chart ─────────────────────────────────────────────────
   function renderBarChart(summary) {
     const container = document.getElementById("bar-chart");
-    if (!summary || Object.keys(summary).length === 0) return;
+    if (!summary || Object.keys(summary).length === 0) {
+      container.textContent = "Waiting for events from Azure Event Hubs...";
+      return;
+    }
 
     const maxVal = Math.max(...Object.values(summary), 1);
     container.innerHTML = "";
@@ -252,10 +278,11 @@
       const row = document.createElement("div");
       row.className = "bar-row";
       row.innerHTML = `
-        <div class="bar-label ${TYPE_CLASS[type] || "t-unknown"}">${type}</div>
+        <div class="bar-label ${TYPE_CLASS[type] || "t-unknown"}"></div>
         <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
         <div class="bar-count">${count}</div>
       `;
+      row.querySelector(".bar-label").textContent = type;
       container.appendChild(row);
     });
   }
@@ -263,22 +290,28 @@
   // ── Live feed ─────────────────────────────────────────────────
   function renderFeed(events) {
     const feed = document.getElementById("feed");
-    if (!events || events.length === 0) return;
+    if (!events || events.length === 0) {
+      feed.textContent = "Waiting for events from Azure Event Hubs...";
+      return;
+    }
 
     feed.innerHTML = "";
     // Show newest first
     [...events].reverse().forEach(e => {
-      const ts   = e.timestamp ? e.timestamp.slice(11, 19) : "–";
-      const type = e.event_type || "unknown";
+      const ts   = e.timestamp ? String(e.timestamp).slice(11, 19) : "–";
+      const type = typeof e.event_type === "string" ? e.event_type : "unknown";
       const cls  = TYPE_CLASS[type] || "t-unknown";
       const row  = document.createElement("div");
       row.className = "feed-row";
-      row.innerHTML = `
-        <span class="feed-ts">${ts}</span>
-        <span class="feed-type ${cls}">${type}</span>
-        <span class="feed-page">${e.page || "–"}</span>
-        <span class="feed-user">${(e.user_id || "–").slice(0, 8)}</span>
-      `;
+      for (const [className, value] of [
+        ["feed-ts", ts], ["feed-type " + cls, type],
+        ["feed-page", e.page || "–"], ["feed-user", String(e.user_id || "–").slice(0, 8)],
+      ]) {
+        const span = document.createElement("span");
+        span.className = className;
+        span.textContent = value;
+        row.appendChild(span);
+      }
       feed.appendChild(row);
     });
   }

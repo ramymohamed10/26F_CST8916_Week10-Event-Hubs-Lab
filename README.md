@@ -15,6 +15,8 @@ A two-page web application deployed on **Azure App Service** that demonstrates r
 | Demo Store | `/` | A fake e-commerce site. Every user action sends an event to Event Hubs. |
 | Live Dashboard | `/dashboard` | Polls `/api/events` every 2 seconds and displays a real-time analytics view. |
 
+**Event Hubs is required.** The app refuses to start without a connection string. The dashboard shows only events received by the Event Hubs consumer; `/track` never writes directly to the dashboard buffer. A successful publish and a successful receive are separate steps.
+
 ---
 
 ## Architecture
@@ -127,7 +129,7 @@ flowchart LR
 ```
 
 - **Decoupling:** The producer (`/track`) only knows about Event Hubs — it does not care who reads the events or how many consumers there are. Add a second consumer (fraud detection, ML pipeline, audit log) without touching the producer.
-- **Durability:** Events are persisted in Event Hubs for up to the configured retention period (1 day in this lab). If the consumer thread crashes and restarts, it picks up where it left off — no events lost.
+- **Durability:** Events remain in Event Hubs for the configured retention period (1 day in this lab). This lab starts reading from the beginning of the retained stream after each app restart. Resuming from a saved position across restarts requires a persistent checkpoint store, which this lab does not configure.
 - **Throughput:** Event Hubs is designed for millions of events per second. Partitions allow multiple consumers to read in parallel, distributing the load.
 - **Backpressure isolation:** If the dashboard is slow or offline, Event Hubs absorbs the incoming events without slowing down the store page. The producer and consumer run at their own pace.
 
@@ -135,7 +137,7 @@ flowchart LR
 
 ## Prerequisites
 
-- Python 3.x and pip installed
+- Python 3.11 or later and pip installed
 - An **Azure account** (free tier is fine)
 - **Azure CLI** installed — [install guide](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli)
 - VS Code with the **REST Client** extension (optional)
@@ -207,8 +209,8 @@ Event Hubs Namespace: shopstream-<your-name>
 ### Step 1 – Clone and install
 
 ```bash
-git clone https://github.com/YOUR-USERNAME/26W_CST8916_Week10-Event-Hubs-Lab.git
-cd 26W_CST8916_Week10-Event-Hubs-Lab
+git clone https://github.com/YOUR-USERNAME/26F_CST8916_Week10-Event-Hubs-Lab.git
+cd 26F_CST8916_Week10-Event-Hubs-Lab
 pip install -r requirements.txt
 ```
 
@@ -228,6 +230,8 @@ $env:EVENT_HUB_NAME="clickstream"
 
 > Never put your connection string directly in the code. The app reads it from the environment so secrets stay out of source control.
 
+The connection string must grant both **Send** and **Listen** access. The namespace-level `RootManageSharedAccessKey` used here grants both. `EVENT_HUB_NAME` defaults to `clickstream`; set it explicitly if you chose another name.
+
 ### Step 3 – Run the app
 
 ```bash
@@ -236,16 +240,20 @@ python app.py
 
 You should see:
 ```
-Event Hubs consumer thread started
  * Running on http://0.0.0.0:8000
 ```
+
+The consumer starts automatically when `app.py` loads. If the connection string is missing or malformed, startup stops with an explanatory error. Authentication, hub-name, and network problems appear in the dashboard status and application logs once the consumer tries to connect.
 
 ### Step 4 – Try it out
 
 1. Open `http://localhost:8000` — the ShopStream store loads.
 2. Click on products, add items to cart, click the banner.
-3. Watch the **Event Stream Log** at the bottom of the store page — each click shows as `→ sent to Event Hubs`.
-4. Open `http://localhost:8000/dashboard` — the live dashboard updates every 2 seconds.
+3. Watch the **Event Hubs Publish Log** at the bottom of the store page. A confirmed publish shows `→ published to Event Hubs`; failed requests show an error.
+4. Open `http://localhost:8000/dashboard`. It polls every 2 seconds and shows **WAITING FOR EVENTS** until an event is received, **EVENTS RECEIVED** with the last receive time, or **CONSUMER ERROR** if receiving fails.
+5. Check that your clicks appear after the consumer receives them from Azure. Existing retained events may also appear when the app starts.
+
+The dashboard counts the most recent 50 received events, rather than lifetime totals. Its buffer and consumer checkpoints are in memory. Restarting the app clears the buffer, then replays retained events. Replayed or redelivered events can appear again; this lab does not implement exactly-once processing.
 
 ---
 
@@ -320,13 +328,13 @@ You will deploy the app directly from your GitHub fork using Azure App Service's
 
 1. Go to the lab repository on GitHub.
 2. Click the **Fork** button at the top right.
-3. This creates your own copy at `https://github.com/<your-username>/26W_CST8916_Week10-Event-Hubs-Lab`.
+3. This creates your own copy at `https://github.com/<your-username>/26F_CST8916_Week10-Event-Hubs-Lab`.
 
 ### Step 2 – Clone your fork locally
 
 ```bash
-git clone https://github.com/<your-username>/26W_CST8916_Week10-Event-Hubs-Lab.git
-cd 26W_CST8916_Week10-Event-Hubs-Lab
+git clone https://github.com/<your-username>/26F_CST8916_Week10-Event-Hubs-Lab.git
+cd 26F_CST8916_Week10-Event-Hubs-Lab
 ```
 
 You already ran the app locally in Part 2 from this clone. Now you will deploy the same code to Azure directly from this GitHub repository.
@@ -359,7 +367,7 @@ On the **Deployment** tab:
 2. Under **GitHub Actions settings**, click **Authorize** and sign in to GitHub when prompted.
 3. Fill in:
    - **Organization:** your GitHub username
-   - **Repository:** `26W_CST8916_Week10-Event-Hubs-Lab`
+   - **Repository:** `26F_CST8916_Week10-Event-Hubs-Lab`
    - **Branch:** `main`
 4. Click **Review + create** → **Create**.
 
@@ -381,28 +389,28 @@ The app reads the Event Hubs connection string from environment variables. You s
 
 > Setting secrets in Application Settings is the Azure equivalent of `export` on your local machine. The app reads them with `os.environ.get()` — the same code works in both environments without any changes.
 
-### Step 6 – Set the startup command
+### Automatic application startup
 
-Azure App Service needs to know how to start the Flask app using Gunicorn (the production web server).
+**Leave the Startup command field blank.** Azure App Service's Linux Python runtime automatically detects `app.py` and starts its Flask `app` object with Gunicorn. See [Microsoft's Flask startup documentation](https://learn.microsoft.com/en-us/azure/app-service/configure-language-python#flask-app).
 
-1. In your App Service, click **Configuration** → **Stack settings** tab.
-2. In the **Startup command** field, enter:
-   ```
-   gunicorn --bind 0.0.0.0:8000 app:app
-   ```
-3. Click **Apply**.
+Keep `app.py`, `requirements.txt`, and `gunicorn.conf.py` in the deployed repository root. Gunicorn automatically reads `gunicorn.conf.py`, which uses one worker with four request threads and disables application preloading. The Event Hubs consumer starts when that worker imports `app.py`. Locally, `python app.py` uses the same initialization.
 
-### Step 7 – Verify the deployment
+This lab uses one App Service instance and one Gunicorn worker because its event buffer is in process memory. Scaling to multiple processes or instances requires shared storage for dashboard data.
+
+If an earlier version of the lab has a custom Startup command configured, clear it once so Azure can use automatic startup.
+
+### Step 6 – Verify the deployment
 
 1. Go to your repository on GitHub → **Actions** tab.
 2. You should see a workflow run in progress or completed. Click it to watch the build logs.
 3. Once the workflow shows a green checkmark, go back to the Azure Portal.
 4. In your App Service, click **Overview** → find the **Default domain** and click it.
 5. The ShopStream store should load. Click around, then open `/dashboard` to see the live analytics.
+6. Check the publish log and consumer status. A green GitHub Actions run verifies deployment; the dashboard receiving your events verifies the Event Hubs path. `/health` reports HTTP 503 if the consumer has reported an error or stopped.
 
 > If the page does not load immediately, wait 30–60 seconds and refresh. The free tier can take a moment to cold-start.
 
-### Step 8 – Make a change and redeploy
+### Step 7 – Make a change and redeploy
 
 This step demonstrates the power of CI/CD.
 
@@ -433,19 +441,40 @@ You can also view metrics:
 
 > These charts show the actual volume of events flowing through your Event Hub — the same data your app is producing.
 
+### Verify the full Event Hubs path
+
+1. Click **Add to Cart** in the store and confirm `published to Event Hubs` in the publish log.
+2. Confirm the `add_to_cart` event appears on the dashboard and that its last receive time advances. Only the consumer can add an event to this feed.
+3. Confirm **Incoming Messages** and **Outgoing Messages** increase for your Event Hub. Portal metrics may take time to refresh.
+4. As a local failure check, stop the app, unset `EVENT_HUB_CONNECTION_STR`, and run `python app.py` again. It must refuse to start with an error naming the required setting. Restore the variable before continuing.
+5. If publishing succeeds but no new events arrive, check **CONSUMER ERROR**, `/health`, and App Service **Log stream**. Verify the connection string has Listen permission as well as Send permission, and the Event Hub name matches.
+
+## Run the regression checks
+
+After installing `requirements.txt`, run:
+
+```bash
+python -m unittest discover -s tests -v
+node tests/test_ui.cjs
+```
+
+The Python checks exercise Flask routes and automatic consumer startup with mocked Azure clients. The JavaScript checks exercise publish confirmations and dashboard error states with mocked HTTP responses. They do not require Azure credentials; Node.js is needed only for the JavaScript checks. Use the steps above for live Azure verification.
+
 ---
 
 ## Project Structure
 
 ```
-26W_CST8916_Week10-Event-Hubs-Lab/
+26F_CST8916_Week10-Event-Hubs-Lab/
 ├── app.py               # Flask app: /track producer + /api/events consumer endpoint
+├── gunicorn.conf.py     # Automatic Gunicorn settings for the single-worker lab
 ├── requirements.txt     # Python dependencies
 ├── .gitignore           # Excludes secrets and build artifacts
 ├── README.md            # This file
-└── templates/
-    ├── client.html      # Demo e-commerce store (event producer)
-    └── dashboard.html   # Live analytics dashboard (event consumer view)
+├── templates/
+│   ├── client.html      # Demo e-commerce store (event producer)
+│   └── dashboard.html   # Live analytics dashboard (event consumer view)
+└── tests/               # Regression checks using mocked Azure and HTTP responses
 ```
 
 ---
