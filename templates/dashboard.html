@@ -1,324 +1,196 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ShopStream – Live Analytics Dashboard</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: #0d1117;
-      color: #e6edf3;
-      min-height: 100vh;
-    }
-
-    /* ── Header ─────────────────────────────────────────────── */
-    header {
-      background: #161b22;
-      border-bottom: 1px solid #30363d;
-      padding: 14px 24px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-    header h1 { font-size: 1.2rem; color: #58a6ff; }
-    .live-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      background: #1c2128;
-      border: 1px solid #30363d;
-      border-radius: 20px;
-      padding: 4px 12px;
-      font-size: 0.8rem;
-      color: #e3b341;
-    }
-    .live-badge .dot {
-      width: 8px; height: 8px;
-      background: currentColor;
-      border-radius: 50%;
-      animation: pulse 1.4s infinite;
-    }
-    .live-badge.receiving { color: #3fb950; }
-    .live-badge.error, .live-badge.stopped { color: #f85149; }
-    .consumer-status { padding: 16px 24px 0; color: #8b949e; font-size: 0.85rem; }
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50%       { opacity: 0.3; }
-    }
-    header nav a {
-      color: #58a6ff;
-      text-decoration: none;
-      font-size: 0.85rem;
-      margin-left: 16px;
-    }
-
-    /* ── KPI cards ──────────────────────────────────────────── */
-    .kpi-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 16px;
-      padding: 24px;
-    }
-    .kpi {
-      background: #161b22;
-      border: 1px solid #30363d;
-      border-radius: 10px;
-      padding: 18px 24px;
-      flex: 1;
-      min-width: 160px;
-    }
-    .kpi .label { font-size: 0.75rem; color: #8b949e; text-transform: uppercase; letter-spacing: 1px; }
-    .kpi .value { font-size: 2rem; font-weight: 700; margin-top: 6px; color: #58a6ff; }
-    .kpi .value.green  { color: #3fb950; }
-    .kpi .value.yellow { color: #e3b341; }
-    .kpi .value.red    { color: #f85149; }
-
-    /* ── Section layout ─────────────────────────────────────── */
-    .panels {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 16px;
-      padding: 0 24px 24px;
-    }
-    .panel {
-      background: #161b22;
-      border: 1px solid #30363d;
-      border-radius: 10px;
-      padding: 20px;
-      flex: 1;
-      min-width: 280px;
-    }
-    .panel h3 {
-      font-size: 0.85rem;
-      color: #8b949e;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      margin-bottom: 16px;
-    }
-
-    /* ── Bar chart ──────────────────────────────────────────── */
-    .bar-row {
-      display: flex;
-      align-items: center;
-      margin-bottom: 10px;
-      gap: 10px;
-    }
-    .bar-label { width: 120px; font-size: 0.85rem; color: #c9d1d9; flex-shrink: 0; }
-    .bar-track { flex: 1; background: #21262d; border-radius: 4px; height: 18px; overflow: hidden; }
-    .bar-fill  { height: 100%; background: #1f6feb; border-radius: 4px; transition: width 0.4s ease; }
-    .bar-count { width: 30px; text-align: right; font-size: 0.85rem; color: #8b949e; }
-
-    /* ── Event feed ─────────────────────────────────────────── */
-    #feed {
-      font-family: "Courier New", monospace;
-      font-size: 0.78rem;
-      max-height: 320px;
-      overflow-y: auto;
-    }
-    .feed-row {
-      display: flex;
-      gap: 8px;
-      padding: 5px 0;
-      border-bottom: 1px solid #21262d;
-    }
-    .feed-row:last-child { border-bottom: none; }
-    .feed-ts    { color: #484f58; flex-shrink: 0; width: 90px; }
-    .feed-type  { flex-shrink: 0; width: 110px; }
-    .feed-page  { color: #8b949e; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .feed-user  { color: #484f58; flex-shrink: 0; width: 60px; }
-
-    /* event type colours */
-    .t-page_view    { color: #58a6ff; }
-    .t-product_click{ color: #3fb950; }
-    .t-add_to_cart  { color: #e3b341; }
-    .t-purchase     { color: #f85149; }
-    .t-banner_click { color: #bc8cff; }
-    .t-unknown      { color: #8b949e; }
-
-    /* ── Footer ─────────────────────────────────────────────── */
-    footer {
-      text-align: center;
-      padding: 16px;
-      color: #484f58;
-      font-size: 0.78rem;
-      border-top: 1px solid #21262d;
-    }
-  </style>
-</head>
-<body>
-
-<!-- ── Header ─────────────────────────────────────────────────── -->
-<header>
-  <h1>ShopStream – Live Analytics</h1>
-  <div style="display:flex; align-items:center; gap:16px;">
-    <div class="live-badge" id="consumer-badge"><div class="dot"></div><span id="consumer-label">CHECKING CONSUMER</span></div>
-    <nav>
-      <a href="/">← Back to Store</a>
-    </nav>
-  </div>
-</header>
-<p class="consumer-status" id="consumer-message" role="status" aria-live="polite">Checking Event Hubs consumer status…</p>
-
-<!-- ── KPI row ────────────────────────────────────────────────── -->
-<div class="kpi-row">
-  <div class="kpi">
-    <div class="label">Recent Events (up to 50)</div>
-    <div class="value" id="kpi-total">–</div>
-  </div>
-  <div class="kpi">
-    <div class="label">Page Views</div>
-    <div class="value green" id="kpi-views">–</div>
-  </div>
-  <div class="kpi">
-    <div class="label">Add to Cart</div>
-    <div class="value yellow" id="kpi-cart">–</div>
-  </div>
-  <div class="kpi">
-    <div class="label">Purchases</div>
-    <div class="value red" id="kpi-purchase">–</div>
-  </div>
-</div>
-
-<!-- ── Panels ─────────────────────────────────────────────────── -->
-<div class="panels">
-
-  <!-- Event type breakdown -->
-  <div class="panel" style="max-width:400px;">
-    <h3>Events by Type</h3>
-    <div id="bar-chart">
-      <p style="color:#484f58; font-size:0.85rem;">Waiting for events...</p>
-    </div>
-  </div>
-
-  <!-- Live event feed -->
-  <div class="panel">
-    <h3>Live Event Feed (from Azure Event Hubs)</h3>
-    <div id="feed">
-      <p style="color:#484f58; font-size:0.85rem;">Waiting for events...</p>
-    </div>
-  </div>
-
-</div>
-
-<footer>
-  Polling <code>/api/events</code> every 2 seconds &nbsp;|&nbsp;
-  Events consumed from Azure Event Hubs &nbsp;|&nbsp;
-  CST8916 Week 10 Lab
-</footer>
-
-<script>
-  // Poll /api/events every 2 seconds and refresh the UI
-  const POLL_INTERVAL_MS = 2000;
-
-  // Colour map for event types
-  const TYPE_CLASS = {
-    page_view:     "t-page_view",
-    product_click: "t-product_click",
-    add_to_cart:   "t-add_to_cart",
-    purchase:      "t-purchase",
-    banner_click:  "t-banner_click",
-  };
-
-  function fetchAndRender() {
-    fetch("/api/events?limit=50")
-      .then(res => {
-        if (!res.ok) throw new Error("Dashboard request failed.");
-        return res.json();
-      })
-      .then(data => {
-        renderConsumerStatus(data.consumer);
-        renderKPIs(data);
-        renderBarChart(data.summary);
-        renderFeed(data.events);
-      })
-      .catch(err => {
-        renderConsumerStatus({state: "error", message: "Unable to refresh the dashboard. Displayed events may be out of date."});
-        console.error("Poll error:", err);
-      });
-  }
-
-  function renderConsumerStatus(consumer) {
-    const labels = {waiting: "WAITING FOR EVENTS", receiving: "EVENTS RECEIVED", error: "CONSUMER ERROR", stopped: "CONSUMER STOPPED"};
-    const state = consumer?.state || "error";
-    document.getElementById("consumer-badge").className = `live-badge ${state}`;
-    document.getElementById("consumer-label").textContent = labels[state] || "STATUS UNAVAILABLE";
-    let message = consumer?.message || "Event Hubs consumer status is unavailable.";
-    if (consumer?.last_received_at) {
-      message += ` Last event received at ${new Date(consumer.last_received_at).toLocaleTimeString()}.`;
-    }
-    document.getElementById("consumer-message").textContent = message;
-  }
-
-  // ── KPI cards ────────────────────────────────────────────────
-  function renderKPIs(data) {
-    document.getElementById("kpi-total").textContent    = data.total ?? 0;
-    document.getElementById("kpi-views").textContent    = data.summary?.page_view    ?? 0;
-    document.getElementById("kpi-cart").textContent     = data.summary?.add_to_cart  ?? 0;
-    document.getElementById("kpi-purchase").textContent = data.summary?.purchase     ?? 0;
-  }
-
-  // ── Bar chart ─────────────────────────────────────────────────
-  function renderBarChart(summary) {
-    const container = document.getElementById("bar-chart");
-    if (!summary || Object.keys(summary).length === 0) {
-      container.textContent = "Waiting for events from Azure Event Hubs...";
-      return;
-    }
-
-    const maxVal = Math.max(...Object.values(summary), 1);
-    container.innerHTML = "";
-
-    // Sort by count descending
-    const sorted = Object.entries(summary).sort((a, b) => b[1] - a[1]);
-    sorted.forEach(([type, count]) => {
-      const pct = (count / maxVal * 100).toFixed(1);
-      const row = document.createElement("div");
-      row.className = "bar-row";
-      row.innerHTML = `
-        <div class="bar-label ${TYPE_CLASS[type] || "t-unknown"}"></div>
-        <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
-        <div class="bar-count">${count}</div>
-      `;
-      row.querySelector(".bar-label").textContent = type;
-      container.appendChild(row);
-    });
-  }
-
-  // ── Live feed ─────────────────────────────────────────────────
-  function renderFeed(events) {
-    const feed = document.getElementById("feed");
-    if (!events || events.length === 0) {
-      feed.textContent = "Waiting for events from Azure Event Hubs...";
-      return;
-    }
-
-    feed.innerHTML = "";
-    // Show newest first
-    [...events].reverse().forEach(e => {
-      const ts   = e.timestamp ? String(e.timestamp).slice(11, 19) : "–";
-      const type = typeof e.event_type === "string" ? e.event_type : "unknown";
-      const cls  = TYPE_CLASS[type] || "t-unknown";
-      const row  = document.createElement("div");
-      row.className = "feed-row";
-      for (const [className, value] of [
-        ["feed-ts", ts], ["feed-type " + cls, type],
-        ["feed-page", e.page || "–"], ["feed-user", String(e.user_id || "–").slice(0, 8)],
-      ]) {
-        const span = document.createElement("span");
-        span.className = className;
-        span.textContent = value;
-        row.appendChild(span);
-      }
-      feed.appendChild(row);
-    });
-  }
-
-  // Kick off polling immediately, then repeat
-  fetchAndRender();
-  setInterval(fetchAndRender, POLL_INTERVAL_MS);
-</script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ShopStream · Live analytics</title>
+    <link rel="stylesheet" href="/static/dashboard.css" />
+    <script src="/static/dashboard.js" defer></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/"
+        >ShopStream<span>.</span> <small>ANALYTICS</small></a
+      >
+      <div class="topbar-right">
+        <span class="consumer-badge" id="consumer-badge"
+          ><i></i><span id="consumer-label">CHECKING CONSUMER</span></span
+        ><a href="/">Visit store ↗</a>
+      </div>
+    </header>
+    <main class="dashboard">
+      <div class="page-heading">
+        <div>
+          <p class="eyebrow">FROM CLICK TO CUSTOMER INSIGHT</p>
+          <h1>Your store, in the moment.</h1>
+          <p class="subtitle">
+            Follow the shopping journey as events arrive from Azure Event Hubs.
+          </p>
+        </div>
+        <div class="refresh-note">
+          <span class="live-dot"></span> Refreshes every 2 seconds<span
+            id="last-refresh"
+            >Waiting for first refresh</span
+          >
+        </div>
+      </div>
+      <p
+        class="consumer-message"
+        id="consumer-message"
+        role="status"
+        aria-live="polite"
+      >
+        Checking Event Hubs consumer status…
+      </p>
+      <p class="stale-message" id="stale-message" role="alert" hidden>
+        Unable to refresh. Displayed activity may be out of date; retrying
+        automatically.
+      </p>
+      <section class="kpi-row" aria-label="Recent event metrics">
+        <article class="kpi">
+          <span>Recent events</span><strong id="kpi-total">—</strong
+          ><small
+            >Latest 50 · <span class="metric-scope">all shoppers</span></small
+          >
+        </article>
+        <article class="kpi">
+          <span>Page views</span><strong id="kpi-views">—</strong
+          ><small>In the recent event window</small>
+        </article>
+        <article class="kpi">
+          <span>Add to cart</span><strong id="kpi-cart">—</strong
+          ><small>In the recent event window</small>
+        </article>
+        <article class="kpi">
+          <span>Purchases</span><strong id="kpi-purchase">—</strong
+          ><small>In the recent event window</small>
+        </article>
+        <article class="kpi">
+          <span>Active shoppers <em>GLOBAL</em></span
+          ><strong id="kpi-active">—</strong
+          ><small>Tracked activity in the last 5 minutes</small>
+        </article>
+        <article class="kpi highlight">
+          <span>High-value checkouts <em>GLOBAL</em></span
+          ><strong id="kpi-high-value">—</strong
+          ><small>Active checkouts above CAD $1,000</small>
+        </article>
+      </section>
+      <section class="panel opportunity">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">A SIGNAL WORTH WATCHING</p>
+            <h2>High-value shoppers at checkout</h2>
+          </div>
+          <span class="pill gold">LIVE OPPORTUNITIES</span>
+        </div>
+        <p class="panel-note">
+          Cart above CAD $1,000 · reviewing checkout · active in the last 5
+          minutes. Completed orders clear this flag.
+        </p>
+        <div id="opportunities" class="opportunity-list">
+          <p class="empty">Waiting for shoppers to reach checkout.</p>
+        </div>
+      </section>
+      <section class="panel">
+        <div class="panel-heading shopper-heading">
+          <div>
+            <h2>Shopper activity</h2>
+            <p class="panel-note">
+              One browser, one shopper. Select a shopper to inspect their
+              journey.
+            </p>
+          </div>
+          <div class="filter">
+            <label for="user-filter">Filter by shopper</label
+            ><select id="user-filter">
+              <option value="">All shoppers</option></select
+            ><button type="button" id="clear-filter" class="text-button" hidden>
+              Clear
+            </button>
+          </div>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <caption class="sr-only">
+              Observed shoppers and their current shopping state
+            </caption>
+            <thead>
+              <tr>
+                <th>Shopper</th>
+                <th>Current cart</th>
+                <th>Stage</th>
+                <th>Last activity</th>
+                <th>Observed orders</th>
+                <th>Observed spend</th>
+              </tr>
+            </thead>
+            <tbody id="shopper-rows">
+              <tr>
+                <td colspan="6" class="empty">Waiting for shopper activity…</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="table-note">
+          Cart state and spending survive the recent-event window. Observed
+          spending is rebuilt from retained events on restart.
+        </p>
+      </section>
+      <section
+        class="panel selected-panel"
+        id="selected-panel"
+        hidden
+        aria-labelledby="selected-title"
+      >
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">SHOPPER DETAIL</p>
+            <h2 id="selected-title"></h2>
+          </div>
+          <span id="selected-stage" class="pill"></span>
+        </div>
+        <div class="selected-layout">
+          <div>
+            <h3>Current cart</h3>
+            <div id="selected-cart"></div>
+          </div>
+          <div class="selected-stats">
+            <div>
+              <span>Observed orders</span><strong id="selected-orders"></strong>
+            </div>
+            <div>
+              <span>Observed spend <small>CAD</small></span
+              ><strong id="selected-spend"></strong>
+            </div>
+          </div>
+        </div>
+      </section>
+      <div class="activity-layout">
+        <section class="panel breakdown">
+          <div class="panel-heading"><h2>Events by type</h2></div>
+          <p class="panel-note metric-scope">all shoppers</p>
+          <div id="bar-chart"><p class="empty">Waiting for events…</p></div>
+        </section>
+        <section class="panel feed-panel">
+          <div class="panel-heading">
+            <h2 id="feed-title">Live event feed</h2>
+            <span class="pill neutral" id="feed-count">LATEST 50</span>
+          </div>
+          <p class="panel-note" id="feed-scope">
+            All shoppers · newest received events first
+          </p>
+          <div id="feed" class="feed">
+            <p class="empty">Waiting for events from Azure Event Hubs…</p>
+          </div>
+        </section>
+      </div>
+      <footer>
+        ShopStream · CST8916 Week 10
+        <span
+          >Browser → Flask producer → Event Hubs → Consumer → Dashboard</span
+        >
+      </footer>
+    </main>
+  </body>
 </html>

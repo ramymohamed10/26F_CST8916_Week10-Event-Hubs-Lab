@@ -1,0 +1,189 @@
+<svg xmlns="http://www.w3.org/2000/svg">
+  <symbol id="laptop" viewBox="0 0 240 200">
+    <rect x="38" y="29" width="164" height="112" rx="9" fill="#365462" />
+    <rect x="44" y="35" width="152" height="99" rx="4" fill="#b8cfce" />
+    <path d="M44 107 112 35h84v99H44Z" fill="#8cafb0" />
+    <path d="m100 134 96-70v70Z" fill="#608e96" />
+    <path d="M38 141h164l26 25c3 5-2 9-7 9H19c-5 0-10-4-7-9Z" fill="#c2d0d3" />
+    <path d="M21 164h198l9 2c3 5-2 9-7 9H19c-5 0-10-4-7-9Z" fill="#8da3ab" />
+    <path d="M98 143h44l7 15H91Z" fill="#9db4bc" />
+    <path
+      d="M48 144h35m-41 6h41m73-6h36m-36 6h42"
+      stroke="#6f8f99"
+      stroke-width="2"
+      stroke-linecap="round"
+    />
+  </symbol>
+  <symbol id="shoes" viewBox="0 0 240 200">
+    <path
+      d="M33 94c8-5 19-29 27-28 12 2 18 18 28 16l38-17c4-2 13 4 17 11 12 18 22 33 47 38 25 4 35 15 35 30H26c-8-16-7-35 7-50Z"
+      fill="#c88f68"
+    />
+    <path d="m58 70 28 31 42-25c8 3 16 13 19 18l-57 27-36-38Z" fill="#f2dcc7" />
+    <path
+      d="M25 126c33 9 57 8 88 0 35-9 61-10 89 0 15 5 22 9 23 18H26Z"
+      fill="#b57852"
+    />
+    <path
+      d="M25 139c58 7 105-7 140-4 26 2 45 6 60 5l1 14c-46 12-135 11-201 1Z"
+      fill="#f7eddc"
+    />
+    <path
+      d="M27 153c63 7 149 8 196-1"
+      stroke="#bdb5a4"
+      stroke-width="5"
+      stroke-linecap="round"
+    />
+    <path
+      d="m109 79 15 20m-28-15 15 21m-29-15 14 22"
+      stroke="#fff7e9"
+      stroke-width="5"
+      stroke-linecap="round"
+    />
+    <path d="m139 107 15 11-29 7 6-10Z" fill="#446565" />
+    <path
+      d="m35 97 16 21"
+      stroke="#a66e4b"
+      stroke-width="7"
+      stroke-linecap="round"
+    />
+  </symbol>
+  <symbol id="watch" viewBox="0 0 240 200">
+    <path d="M101 13h38l7 47H94Zm-7 128h52l-7 47h-38Z" fill="#80967b" />
+    <path d="M108 13h24l4 47h-32Zm-4 128h32l-4 47h-24Z" fill="#8fa587" />
+    <rect x="79" y="50" width="82" height="101" rx="23" fill="#a7b9a5" />
+    <rect x="85" y="56" width="70" height="89" rx="18" fill="#253d3d" />
+    <rect x="89" y="60" width="62" height="81" rx="15" fill="#304b48" />
+    <rect x="162" y="79" width="6" height="18" rx="3" fill="#6e8b7d" />
+    <circle
+      cx="120"
+      cy="94"
+      r="22"
+      stroke="#c6d7aa"
+      stroke-width="4"
+      fill="none"
+    />
+    <path
+      d="M120 78v16l10 7"
+      stroke="#dbe7be"
+      stroke-width="3"
+      fill="none"
+      stroke-linecap="round"
+    />
+    <path
+      d="M109 128h22"
+      stroke="#a9c7b3"
+      stroke-width="4"
+      stroke-linecap="round"
+    />
+  </symbol>
+  <symbol id="camera" viewBox="0 0 240 200">
+    <path
+      d="M48 72h144c9 0 16 7 16 16v61c0 9-7 16-16 16H48c-9 0-16-7-16-16V88c0-9 7-16 16-16Z"
+      fill="#556560"
+    />
+    <path d="M32 90h176v28H32Z" fill="#a3aaa0" />
+    <path d="m79 72 11-21h52l13 21Z" fill="#657570" />
+    <rect x="46" y="63" width="22" height="10" rx="3" fill="#8b958b" />
+    <rect x="88" y="57" width="49" height="12" rx="3" fill="#aeb6a6" />
+    <circle cx="122" cy="115" r="43" fill="#334c49" />
+    <circle cx="122" cy="115" r="35" fill="#9ba99b" />
+    <circle cx="122" cy="115" r="29" fill="#294440" />
+    <circle cx="122" cy="115" r="20" fill="#426564" />
+    <circle cx="122" cy="115" r="12" fill="#223e42" />
+    <circle cx="114" cy="107" r="6" fill="#91b9ac" opacity=".65" />
+    <rect x="174" y="82" width="22" height="12" rx="3" fill="#d5dacb" />
+    <path
+      d="M42 133v13c0 4 2 7 7 7h19"
+      stroke="#7c8c80"
+      stroke-width="3"
+      fill="none"
+      stroke-linecap="round"
+    />
+  </symbol>
+  <symbol id="headphones" viewBox="0 0 240 200">
+    <path
+      d="M58 118V94a62 62 0 0 1 124 0v24"
+      stroke="#344d50"
+      stroke-width="20"
+      fill="none"
+    />
+    <path
+      d="M59 90a61 61 0 0 1 122 0"
+      stroke="#adc1b9"
+      stroke-width="12"
+      fill="none"
+    />
+    <path
+      d="M67 68a60 60 0 0 1 106 0"
+      stroke="#c6d3c6"
+      stroke-width="16"
+      fill="none"
+      stroke-linecap="round"
+    />
+    <rect
+      x="41"
+      y="97"
+      width="42"
+      height="72"
+      rx="20"
+      fill="#476362"
+      transform="rotate(-9 62 133)"
+    />
+    <rect
+      x="49"
+      y="104"
+      width="29"
+      height="60"
+      rx="14"
+      fill="#91aaa0"
+      transform="rotate(-9 62 133)"
+    />
+    <rect
+      x="157"
+      y="97"
+      width="42"
+      height="72"
+      rx="20"
+      fill="#476362"
+      transform="rotate(9 178 133)"
+    />
+    <rect
+      x="162"
+      y="104"
+      width="29"
+      height="60"
+      rx="14"
+      fill="#91aaa0"
+      transform="rotate(9 178 133)"
+    />
+    <path
+      d="M55 113v37m128-37v37"
+      stroke="#b8cdc1"
+      stroke-width="3"
+      stroke-linecap="round"
+    />
+  </symbol>
+  <symbol id="shirt" viewBox="0 0 240 200">
+    <path
+      d="m83 36 23-10c9 8 19 8 28 0l23 10 40 30-21 31-24-15 4 94H84l4-94-24 15-21-31Z"
+      fill="#b67665"
+    />
+    <path
+      d="m86 37 20-11c9 8 19 8 28 0l20 11c-7 22-20 30-34 30s-27-8-34-30Z"
+      fill="#c68d7c"
+    />
+    <path
+      d="m106 27 2 1c7 7 17 7 24 0l2-1c-2 16-9 23-14 23s-12-7-14-23Z"
+      fill="#e2b6a4"
+    />
+    <path
+      d="M92 169h56M54 67l15 20m117-20-15 20"
+      stroke="#9e6052"
+      stroke-width="3"
+      fill="none"
+    />
+    <path d="M108 86h24v22h-24Z" fill="#c78b79" />
+    <path d="M108 86h24" stroke="#9e6052" stroke-width="2" />
+  </symbol>
+</svg>

@@ -1,277 +1,268 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ShopStream – Demo Store</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: #f5f5f5;
-      color: #333;
-    }
-
-    /* ── Header ─────────────────────────────────────────────── */
-    header {
-      background: #1a1a2e;
-      color: white;
-      padding: 14px 24px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-    header h1 { font-size: 1.4rem; letter-spacing: 1px; }
-    header nav a {
-      color: #a0c4ff;
-      text-decoration: none;
-      margin-left: 20px;
-      font-size: 0.9rem;
-    }
-    header nav a:hover { color: white; }
-
-    /* ── Banner ─────────────────────────────────────────────── */
-    .banner {
-      background: linear-gradient(135deg, #16213e, #0f3460);
-      color: white;
-      text-align: center;
-      padding: 36px 24px;
-    }
-    .banner h2 { font-size: 1.8rem; margin-bottom: 8px; }
-    .banner p  { font-size: 0.95rem; opacity: 0.8; }
-
-    /* ── Products ───────────────────────────────────────────── */
-    .section-title {
-      text-align: center;
-      padding: 28px 0 12px;
-      font-size: 1.2rem;
-      font-weight: 600;
-      color: #555;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
-
-    .products {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 20px;
-      justify-content: center;
-      padding: 0 24px 40px;
-    }
-
-    .card {
-      background: white;
-      border-radius: 10px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-      width: 200px;
-      padding: 16px;
-      cursor: pointer;
-      transition: transform 0.15s, box-shadow 0.15s;
-    }
-    .card:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 6px 16px rgba(0,0,0,0.12);
-    }
-    .card .emoji  { font-size: 2.8rem; text-align: center; margin-bottom: 10px; }
-    .card .name   { font-weight: 600; margin-bottom: 4px; }
-    .card .price  { color: #0f3460; font-size: 1rem; font-weight: 700; margin-bottom: 12px; }
-    .card button  {
-      width: 100%;
-      padding: 8px;
-      background: #0f3460;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 0.85rem;
-      transition: background 0.15s;
-    }
-    .card button:hover { background: #16213e; }
-
-    /* ── Event Log ──────────────────────────────────────────── */
-    .log-section {
-      max-width: 760px;
-      margin: 0 auto 48px;
-      padding: 0 24px;
-    }
-    .log-section h3 {
-      font-size: 1rem;
-      font-weight: 600;
-      color: #555;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      margin-bottom: 12px;
-    }
-    #event-log {
-      background: #1a1a2e;
-      color: #a0ffa0;
-      font-family: "Courier New", monospace;
-      font-size: 0.8rem;
-      border-radius: 8px;
-      padding: 14px;
-      height: 200px;
-      overflow-y: auto;
-    }
-    #event-log .log-line { margin-bottom: 4px; }
-    #event-log .log-line span.ts  { color: #888; }
-    #event-log .log-line span.evt { color: #ffd166; }
-    #event-log .log-line span.ok  { color: #06d6a0; }
-    #event-log .log-line span.err { color: #ff8f8f; }
-
-    /* ── Dashboard link ─────────────────────────────────────── */
-    .dashboard-link {
-      text-align: center;
-      padding-bottom: 40px;
-    }
-    .dashboard-link a {
-      display: inline-block;
-      padding: 12px 28px;
-      background: #e63946;
-      color: white;
-      border-radius: 8px;
-      text-decoration: none;
-      font-weight: 600;
-      font-size: 0.95rem;
-      transition: background 0.15s;
-    }
-    .dashboard-link a:hover { background: #c1121f; }
-  </style>
-</head>
-<body>
-
-<!-- ── Header ─────────────────────────────────────────────────── -->
-<header>
-  <h1>ShopStream</h1>
-  <nav>
-    <a href="/">Store</a>
-    <a href="/dashboard">Live Dashboard</a>
-  </nav>
-</header>
-
-<!-- ── Hero banner ────────────────────────────────────────────── -->
-<div class="banner" id="hero-banner">
-  <h2>Welcome to ShopStream</h2>
-  <p>Click a product to publish an event to Azure Event Hubs. Check the log below for confirmation.</p>
-</div>
-
-<!-- ── Product grid ───────────────────────────────────────────── -->
-<p class="section-title">Featured Products</p>
-
-<div class="products" id="product-grid">
-  <!-- Cards are injected by JavaScript below -->
-</div>
-
-<!-- ── Event log ──────────────────────────────────────────────── -->
-<div class="log-section">
-  <h3>Event Hubs Publish Log</h3>
-  <div id="event-log"><span style="color:#888">Waiting for events...</span></div>
-</div>
-
-<!-- ── Dashboard link ─────────────────────────────────────────── -->
-<div class="dashboard-link">
-  <a href="/dashboard">View Live Analytics Dashboard →</a>
-</div>
-
-<script>
-  // ── Product catalogue ──────────────────────────────────────────
-  const PRODUCTS = [
-    { id: "p_shoe_01",   name: "Trail Runners",    price: 89.99,  emoji: "👟", page: "/products/shoes" },
-    { id: "p_laptop_02", name: "UltraBook Pro",    price: 999.00, emoji: "💻", page: "/products/laptops" },
-    { id: "p_watch_03",  name: "SmartWatch X",     price: 249.99, emoji: "⌚", page: "/products/watches" },
-    { id: "p_camera_04", name: "Pocket Camera",    price: 349.50, emoji: "📷", page: "/products/cameras" },
-    { id: "p_headph_05", name: "NoiseFree Buds",   price: 129.00, emoji: "🎧", page: "/products/audio" },
-    { id: "p_tshirt_06", name: "Classic Tee",      price: 29.99,  emoji: "👕", page: "/products/apparel" },
-  ];
-
-  // Simulated session ID – changes on every page load
-  const SESSION_ID = "s_" + Math.random().toString(36).slice(2, 8);
-  // Simulated user ID – in a real app this comes from auth
-  const USER_ID = "u_" + Math.random().toString(36).slice(2, 6);
-
-  // ── Render product cards ───────────────────────────────────────
-  const grid = document.getElementById("product-grid");
-  PRODUCTS.forEach(product => {
-    const card = document.createElement("div");
-    card.className = "card";
-    card.innerHTML = `
-      <div class="emoji">${product.emoji}</div>
-      <div class="name">${product.name}</div>
-      <div class="price">$${product.price.toFixed(2)}</div>
-      <button onclick="addToCart('${product.id}', '${product.page}')">Add to Cart</button>
-    `;
-    // Clicking the card body (not the button) = product_click event
-    card.addEventListener("click", (e) => {
-      if (e.target.tagName !== "BUTTON") {
-        trackEvent("product_click", product.page, product.id);
-      }
-    });
-    grid.appendChild(card);
-  });
-
-  // ── Track page_view on load ────────────────────────────────────
-  trackEvent("page_view", window.location.pathname, null);
-
-  // ── Track banner click ─────────────────────────────────────────
-  document.getElementById("hero-banner").addEventListener("click", () => {
-    trackEvent("banner_click", "/", null);
-  });
-
-  // ── Add to cart handler ────────────────────────────────────────
-  function addToCart(productId, page) {
-    trackEvent("add_to_cart", page, productId);
-  }
-
-  // ── Core tracking function ─────────────────────────────────────
-  // Sends a POST request to /track with the event details.
-  // The Flask backend publishes this to Azure Event Hubs.
-  function trackEvent(eventType, page, productId) {
-    const payload = {
-      event_type: eventType,
-      page:       page,
-      product_id: productId,
-      user_id:    USER_ID,
-      session_id: SESSION_ID,
-    };
-
-    // Send the event to the Flask /track endpoint
-    fetch("/track", {
-      method:  "POST",
-      headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify(payload),
-    })
-    .then(async res => {
-      const data = await res.json();
-      if (!res.ok || data.status !== "published") {
-        throw new Error(data.error || "Publishing was not confirmed.");
-      }
-      logEvent(payload, true);
-    })
-    .catch(err => logEvent(payload, false, err.message));
-  }
-
-  // ── Append a line to the on-page event log ─────────────────────
-  function logEvent(payload, success, errorMessage) {
-    const log  = document.getElementById("event-log");
-    const time = new Date().toISOString().slice(11, 23); // HH:MM:SS.mmm
-    const line = document.createElement("div");
-    line.className = "log-line";
-    line.innerHTML =
-      `<span class="ts">[${time}]</span> ` +
-      `<span class="evt">${payload.event_type}</span> ` +
-      `${payload.page || ""}` +
-      (payload.product_id ? ` (${payload.product_id})` : "");
-    const status = document.createElement("span");
-    status.className = success ? "ok" : "err";
-    status.textContent = success
-      ? " → published to Event Hubs"
-      : ` × publish not confirmed: ${errorMessage || "Check the connection and try again."}`;
-    line.appendChild(status);
-    // Remove placeholder text on first real event
-    if (log.querySelector("span[style]")) log.innerHTML = "";
-    log.appendChild(line);
-    log.scrollTop = log.scrollHeight;
-  }
-</script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="ShopStream — a little more good in your everyday. An interactive shopping and event-streaming demo."
+    />
+    <title>ShopStream · Everyday, upgraded</title>
+    <link rel="stylesheet" href="/static/store.css" />
+    <script src="/static/store.js" defer></script>
+  </head>
+  <body>
+    <div class="announcement">
+      A little more good in your everyday.
+      <span>Discover the collection ↓</span>
+    </div>
+    <header class="site-header">
+      <a class="brand" href="/" data-home aria-label="ShopStream home"
+        ><span class="brand-mark" aria-hidden="true">s<span>·</span></span
+        >ShopStream<span class="brand-period">.</span></a
+      >
+      <nav aria-label="Main navigation">
+        <a href="/#collection" data-shop>Shop the collection</a
+        ><a href="/dashboard" class="analytics-link">Live dashboard ↗</a>
+      </nav>
+      <button
+        class="cart-toggle"
+        id="open-cart"
+        type="button"
+        aria-label="Open cart, 0 items"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M6 7h12l2 14H4L6 7ZM9 8V6a3 3 0 0 1 6 0v2" />
+        </svg>
+        Cart <span id="cart-count">0</span>
+      </button>
+    </header>
+    <main id="main">
+      <section id="store-view">
+        <div class="hero wrap" id="hero-banner">
+          <div class="hero-copy">
+            <p class="eyebrow"><span></span> THE EVERYDAY EDIT</p>
+            <h1>Good things.<br />Great <em>everydays.</em></h1>
+            <p class="hero-description">
+              For the way you work, the places you go,<br />
+              and the moments in between.
+            </p>
+            <button type="button" class="button primary" id="explore">
+              Find your next favourite <span aria-hidden="true">↗</span>
+            </button>
+            <div class="hero-caption">
+              <span class="tiny-stars" aria-hidden="true">✦ ✦ ✦</span>
+              Thoughtfully picked. Simply priced.
+            </div>
+          </div>
+          <div
+            class="hero-art"
+            aria-label="A collection of everyday essentials"
+            role="img"
+          >
+            <div class="art-orbit"></div>
+            <div class="hero-art-label">THE GOOD STUFF</div>
+            <svg
+              class="hero-headphones"
+              viewBox="0 0 240 200"
+              aria-hidden="true"
+            >
+              <use href="/static/products.svg#headphones" /></svg
+            ><svg class="hero-shoe" viewBox="0 0 240 200" aria-hidden="true">
+              <use href="/static/products.svg#shoes" />
+            </svg>
+            <div class="hero-sticker">
+              Less ordinary.<br /><strong>More you.</strong
+              ><span aria-hidden="true">✳</span>
+            </div>
+          </div>
+        </div>
+        <div class="benefits wrap">
+          <span><i aria-hidden="true">✦</i> Everyday essentials</span
+          ><span><i aria-hidden="true">◇</i> A considered collection</span
+          ><span
+            ><i aria-hidden="true">↗</i> Small upgrades. Big difference.</span
+          >
+        </div>
+        <section
+          class="collection wrap"
+          id="collection"
+          aria-labelledby="collection-title"
+        >
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">CURATED FOR YOUR EVERYDAY</p>
+              <h2 id="collection-title">Meet your new favourites.</h2>
+            </div>
+            <p>Six good finds. Endless possibilities.</p>
+          </div>
+          <div class="product-grid" id="product-grid">
+            <p role="status">Getting the collection ready…</p>
+          </div>
+        </section>
+        <section class="story wrap">
+          <span class="story-symbol" aria-hidden="true">✳</span>
+          <div>
+            <p class="eyebrow">
+              A LITTLE LESS SCROLLING. A LITTLE MORE LIVING.
+            </p>
+            <h2>The good stuff, all in one place.</h2>
+            <p>
+              Useful things. Easy choices. Find something that fits your day.
+            </p>
+          </div>
+          <a href="#collection" class="text-link">Explore the collection ↗</a>
+        </section>
+      </section>
+      <section
+        id="checkout-view"
+        class="checkout wrap"
+        hidden
+        aria-labelledby="checkout-title"
+      >
+        <button type="button" class="text-link back-link" data-return>
+          ← Continue shopping
+        </button>
+        <p class="eyebrow">ONE LAST LOOK</p>
+        <h1 id="checkout-title" tabindex="-1">Your everyday upgrades.</h1>
+        <p class="muted">Review your items, then place your demo order.</p>
+        <div class="checkout-layout">
+          <section class="checkout-items panel" aria-label="Order items">
+            <div class="panel-heading">
+              <h2>Order review</h2>
+              <button type="button" class="text-link" id="edit-cart">
+                Edit cart
+              </button>
+            </div>
+            <div id="checkout-items"></div>
+          </section>
+          <aside class="order-summary panel">
+            <p class="eyebrow">ORDER SUMMARY</p>
+            <div class="summary-line">
+              <span>Subtotal</span><strong id="checkout-subtotal"></strong>
+            </div>
+            <div class="summary-line total">
+              <span>Total <small>CAD</small></span
+              ><strong id="checkout-total"></strong>
+            </div>
+            <p class="demo-note">
+              This is a simulated purchase. No payment or personal details are
+              needed. Totals include merchandise only.
+            </p>
+            <button class="button primary full" id="place-order" type="button">
+              Place demo order <span aria-hidden="true">→</span>
+            </button>
+            <p
+              id="purchase-status"
+              class="purchase-status"
+              role="status"
+              aria-live="polite"
+            ></p>
+          </aside>
+        </div>
+      </section>
+      <section
+        id="confirmation-view"
+        class="confirmation wrap"
+        hidden
+        aria-labelledby="confirmation-title"
+      >
+        <div class="confirmation-mark" aria-hidden="true">✓</div>
+        <p class="eyebrow">LOOKING GOOD</p>
+        <h1 id="confirmation-title" tabindex="-1">
+          A little good is on its way.
+        </h1>
+        <p>Your demo order is confirmed. Thanks for shopping with us.</p>
+        <div class="confirmation-receipt panel">
+          <div class="receipt-heading">
+            <span>Order <strong id="order-number"></strong></span
+            ><span class="order-badge">CONFIRMED</span>
+          </div>
+          <div id="confirmation-items"></div>
+          <div class="summary-line total">
+            <span>Total <small>CAD</small></span
+            ><strong id="confirmation-total"></strong>
+          </div>
+        </div>
+        <button type="button" class="button primary" data-return>
+          Keep exploring <span aria-hidden="true">↗</span></button
+        ><a href="/dashboard" class="text-link">See the live activity ↗</a>
+      </section>
+    </main>
+    <div class="demo-bar wrap">
+      <span
+        ><span class="live-dot" aria-hidden="true"></span> SHOPPING, STREAMING
+        LIVE</span
+      >
+      <p>Your shopper ID: <strong id="shopper-id">…</strong></p>
+      <a href="/dashboard">Open live analytics ↗</a>
+    </div>
+    <details class="event-details wrap">
+      <summary>
+        Event activity
+        <span>For the curious: follow your clicks through Event Hubs</span>
+      </summary>
+      <div id="event-log" aria-label="Event publishing activity">
+        <p class="muted">Your shopping events will appear here.</p>
+      </div>
+    </details>
+    <footer class="site-footer wrap">
+      <a href="/" data-home class="brand"
+        >ShopStream<span class="brand-period">.</span></a
+      >
+      <p>Everyday, upgraded.</p>
+      <span>CST8916 · Event Hubs shopping demo</span>
+    </footer>
+    <dialog id="cart-dialog" class="cart-drawer" aria-labelledby="cart-title">
+      <div class="drawer-heading">
+        <h2 id="cart-title">Your cart <span id="drawer-count"></span></h2>
+        <button
+          type="button"
+          class="icon-button"
+          data-close="cart-dialog"
+          aria-label="Close cart"
+        >
+          ×
+        </button>
+      </div>
+      <div id="cart-items" class="drawer-items"></div>
+      <div class="drawer-bottom">
+        <div class="summary-line">
+          <span>Subtotal <small>CAD</small></span
+          ><strong id="cart-subtotal"></strong>
+        </div>
+        <p class="muted">Merchandise only. A simple, simulated checkout.</p>
+        <button type="button" class="button primary full" id="go-checkout">
+          Review &amp; check out <span aria-hidden="true">→</span></button
+        ><button
+          type="button"
+          class="text-link keep-shopping"
+          data-close="cart-dialog"
+        >
+          Continue shopping
+        </button>
+      </div>
+    </dialog>
+    <dialog
+      id="product-dialog"
+      class="product-dialog"
+      aria-labelledby="product-dialog-title"
+    >
+      <button
+        type="button"
+        class="icon-button product-close"
+        data-close="product-dialog"
+        aria-label="Close product details"
+      >
+        ×
+      </button>
+      <div id="product-detail"></div>
+    </dialog>
+    <p class="toast" id="toast" role="status" aria-live="polite"></p>
+    <noscript
+      ><p class="wrap">
+        Please enable JavaScript to use this shopping demo.
+      </p></noscript
+    >
+  </body>
 </html>

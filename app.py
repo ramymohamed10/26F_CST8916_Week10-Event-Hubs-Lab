@@ -1,7 +1,7 @@
 """CST8916: demonstrate a clickstream's journey through Azure Event Hubs.
 
-The /track route produces events. A background consumer receives them and keeps
-the latest 50 in memory. The dashboard polls /api/events to display that buffer.
+The /track route produces events. A background consumer keeps recent windows and
+shopper summaries in memory. The dashboard polls /api/events to display them.
 """
 
 import atexit
@@ -15,6 +15,8 @@ from azure.eventhub import EventData, EventHubConsumerClient, EventHubProducerCl
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 
+from shop import CATALOG, ShopperAnalytics, normalize_event
+
 app = Flask(__name__)
 CORS(app)
 
@@ -22,9 +24,6 @@ CORS(app)
 CONNECTION_STR = os.environ.get("EVENT_HUB_CONNECTION_STR", "").strip()
 EVENT_HUB_NAME = os.environ.get("EVENT_HUB_NAME", "clickstream").strip()
 MAX_BUFFER = 50
-VALID_EVENT_TYPES = {
-    "page_view", "product_click", "add_to_cart", "purchase", "banner_click"
-}
 
 if not CONNECTION_STR or not EVENT_HUB_NAME:
     raise RuntimeError(
@@ -34,7 +33,7 @@ if not CONNECTION_STR or not EVENT_HUB_NAME:
 
 # Shared state: Flask handles requests while the consumer runs on another thread.
 # The lock protects the buffer and its status while either thread accesses them.
-_event_buffer = []
+_analytics = ShopperAnalytics(MAX_BUFFER)
 _buffer_lock = threading.Lock()
 
 _consumer = None
@@ -69,7 +68,7 @@ def send_to_event_hubs(event_dict: dict) -> None:
     )
     with producer:
         # Even one event goes in a batch; add() checks the allowed batch size.
-        event_batch = producer.create_batch()
+        event_batch = producer.create_batch(partition_key=event_dict.get("user_id") or "anonymous")
         event_batch.add(EventData(json.dumps(event_dict)))
         producer.send_batch(event_batch)
 
@@ -82,7 +81,7 @@ def _on_event(partition_context, event):
 
     try:
         data = json.loads(event.body_as_str(encoding="UTF-8"))
-    except (json.JSONDecodeError, TypeError):
+    except (json.JSONDecodeError, TypeError, UnicodeError):
         app.logger.warning("Ignoring an Event Hubs event without valid UTF-8 JSON")
         return
     if not isinstance(data, dict):
@@ -90,10 +89,8 @@ def _on_event(partition_context, event):
         return
 
     with _buffer_lock:
-        _event_buffer.append(data)
-        # This is a recent-event window, so discard the oldest item when full.
-        if len(_event_buffer) > MAX_BUFFER:
-            _event_buffer.pop(0)
+        transport_id = (partition_context.partition_id, event.sequence_number)
+        _analytics.consume(data, transport_id=transport_id)
         _consumer_status.update(
             state="receiving",
             message="Events received from Azure Event Hubs.",
@@ -185,9 +182,16 @@ def stop_consumer():
 
 # HTTP routes: browser pages, event publishing, dashboard data, and status.
 @app.route("/")
+@app.route("/checkout")
 def index():
     """Serve the demo e-commerce store."""
     return send_from_directory("templates", "client.html")
+
+
+@app.route("/api/catalog")
+def catalog():
+    """One server-owned catalogue for the store and event price validation."""
+    return jsonify({"products": CATALOG, "currency": "CAD"})
 
 
 @app.route("/dashboard")
@@ -200,27 +204,10 @@ def dashboard():
 def track():
     """Validate a browser event, add a UTC timestamp, and publish it to Azure."""
     payload = request.get_json(silent=True)
-    if not isinstance(payload, dict) or not payload:
-        return jsonify({
-            "error": "Expected a JSON object containing a click event."
-        }), 400
-
-    event_type = payload.get("event_type")
-    if not isinstance(event_type, str) or event_type not in VALID_EVENT_TYPES:
-        return jsonify({"error": "Unsupported or missing event_type."}), 400
-    for field in ("page", "product_id", "user_id", "session_id"):
-        value = payload.get(field)
-        if value is not None and not isinstance(value, str):
-            return jsonify({"error": f"{field} must be a string or null."}), 400
-
-    event = {
-        "event_type": event_type,
-        "page": payload.get("page", "/"),
-        "product_id": payload.get("product_id"),
-        "user_id": payload.get("user_id", "anonymous"),
-        "session_id": payload.get("session_id"),
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-    }
+    try:
+        event = normalize_event(payload)
+    except ValueError as error:
+        return jsonify({"error": str(error)}), 400
 
     try:
         send_to_event_hubs(event)
@@ -242,7 +229,8 @@ def track():
 def get_events():
     """Return recent events and counts for the dashboard's two-second polling.
 
-    Optional query parameter: ?limit=20 (default 20, allowed range 1–50).
+    Query parameters: limit (default 20, range 1–50) and optional user_id.
+    Shopper histories have their own window; roster and active counts are global.
     """
     try:
         # Convert the URL value to an integer and keep it within the buffer size.
@@ -251,22 +239,9 @@ def get_events():
         limit = 20
 
     with _buffer_lock:
-        recent = list(_event_buffer[-limit:])
-
-    # Counts describe this response's window, not all events ever published.
-    summary = {}
-    for event in recent:
-        event_type = event.get("event_type", "unknown")
-        if not isinstance(event_type, str):
-            event_type = "unknown"
-        summary[event_type] = summary.get(event_type, 0) + 1
-
-    return jsonify({
-        "events": recent,
-        "summary": summary,
-        "total": len(recent),
-        "consumer": get_consumer_status(),
-    }), 200
+        result = _analytics.snapshot(limit, request.args.get("user_id"))
+        result["consumer"] = dict(_consumer_status)
+    return jsonify(result), 200
 
 
 @app.route("/health", methods=["GET"])

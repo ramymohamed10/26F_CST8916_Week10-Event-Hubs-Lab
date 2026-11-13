@@ -7,6 +7,9 @@ venv/
 env/
 .venv/
 
+# Local verification only
+/tests/
+
 # Secrets – NEVER commit connection strings
 .env.local
 secrets.sh
