@@ -312,8 +312,7 @@ def get_events():
 
 # ---------------------------------------------------------------------------
 # Initialize on import as well as direct execution. Azure App Service detects
-# app.py automatically and imports app:app with Gunicorn. gunicorn.conf.py keeps
-# one worker and disables preloading so the thread starts in the serving process.
+# app.py automatically and imports app:app with its default Gunicorn startup.
 # ---------------------------------------------------------------------------
 start_consumer()
 atexit.register(stop_consumer)

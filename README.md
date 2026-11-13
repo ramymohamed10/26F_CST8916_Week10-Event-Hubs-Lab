@@ -393,7 +393,7 @@ The app reads the Event Hubs connection string from environment variables. You s
 
 **Leave the Startup command field blank.** Azure App Service's Linux Python runtime automatically detects `app.py` and starts its Flask `app` object with Gunicorn. See [Microsoft's Flask startup documentation](https://learn.microsoft.com/en-us/azure/app-service/configure-language-python#flask-app).
 
-Keep `app.py`, `requirements.txt`, and `gunicorn.conf.py` in the deployed repository root. Gunicorn automatically reads `gunicorn.conf.py`, which uses one worker with four request threads and disables application preloading. The Event Hubs consumer starts when that worker imports `app.py`. Locally, `python app.py` uses the same initialization.
+Keep `app.py` and `requirements.txt` in the deployed repository root. Azure uses its default Gunicorn startup without a custom configuration file. The Event Hubs consumer starts when Gunicorn imports `app.py`. Locally, `python app.py` uses the same initialization.
 
 This lab uses one App Service instance and one Gunicorn worker because its event buffer is in process memory. Scaling to multiple processes or instances requires shared storage for dashboard data.
 
@@ -449,17 +449,6 @@ You can also view metrics:
 4. As a local failure check, stop the app, unset `EVENT_HUB_CONNECTION_STR`, and run `python app.py` again. It must refuse to start with an error naming the required setting. Restore the variable before continuing.
 5. If publishing succeeds but no new events arrive, check **CONSUMER ERROR**, `/health`, and App Service **Log stream**. Verify the connection string has Listen permission as well as Send permission, and the Event Hub name matches.
 
-## Run the regression checks
-
-After installing `requirements.txt`, run:
-
-```bash
-python -m unittest discover -s tests -v
-node tests/test_ui.cjs
-```
-
-The Python checks exercise Flask routes and automatic consumer startup with mocked Azure clients. The JavaScript checks exercise publish confirmations and dashboard error states with mocked HTTP responses. They do not require Azure credentials; Node.js is needed only for the JavaScript checks. Use the steps above for live Azure verification.
-
 ---
 
 ## Project Structure
@@ -467,14 +456,12 @@ The Python checks exercise Flask routes and automatic consumer startup with mock
 ```
 26F_CST8916_Week10-Event-Hubs-Lab/
 ├── app.py               # Flask app: /track producer + /api/events consumer endpoint
-├── gunicorn.conf.py     # Automatic Gunicorn settings for the single-worker lab
 ├── requirements.txt     # Python dependencies
 ├── .gitignore           # Excludes secrets and build artifacts
 ├── README.md            # This file
-├── templates/
-│   ├── client.html      # Demo e-commerce store (event producer)
-│   └── dashboard.html   # Live analytics dashboard (event consumer view)
-└── tests/               # Regression checks using mocked Azure and HTTP responses
+└── templates/
+    ├── client.html      # Demo e-commerce store (event producer)
+    └── dashboard.html   # Live analytics dashboard (event consumer view)
 ```
 
 ---
