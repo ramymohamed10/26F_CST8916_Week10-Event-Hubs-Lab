@@ -461,25 +461,6 @@ Watch the new Actions run, then refresh the deployed store to see the change.
 
 Incoming Messages counts events sent to Event Hubs; Outgoing Messages counts events read from it. Replays and additional readers can make these counts differ. Metrics show volume, while the dashboard shows this app's received JSON events. See the [Event Hubs metrics reference](https://learn.microsoft.com/en-us/azure/event-hubs/monitor-event-hubs-reference).
 
-### Troubleshooting
-
-| Symptom | Check |
-| --- | --- |
-| Startup reports missing configuration | Set both environment variables in the same terminal used to start Python, or in App Service app settings. |
-| Store reports a publish failure | Check the full connection string, hub name, **Send** permission, and network access. |
-| Publish succeeds but the dashboard stays empty | Check **Listen** permission, consumer status, `/health`, and terminal logs or App Service **Log stream**. |
-| Consumer remains **WAITING FOR EVENTS** | Generate a new click and allow time to connect. Waiting alone confirms neither success nor failure. |
-| Old events appear after restarting | Expected: the consumer replays retained events from the beginning. |
-| Purchase count stays at zero | Place a demo order from checkout, verify publishing, and select the correct shopper/window. The recent count covers at most 50 events; observed orders remain in the shopper summary. |
-| A large cart is not flagged | The shopper must be reviewing checkout, the subtotal must be strictly above CAD $1,000, and the last tracked action must be less than five minutes old. Check consumer delivery. |
-| Old shoppers are visible but inactive | Expected after replay or five minutes without tracked interaction. An open store tab does not send heartbeats. |
-| Cart controls are locked after a failed purchase | Use **Retry demo order** to confirm the saved attempt with its original order/event IDs. |
-| GitHub Actions references `Clickstream` or missing deployment secrets | Remove the inherited instructor workflow and configure Deployment Center for your own fork. |
-| Azure shows a default page or startup error | Check the Actions run, root `app.py` and `requirements.txt`, app settings, build setting, and blank Startup command. |
-| Local connection fails on a campus network | The SDK uses AMQP over TLS, normally outbound port 5671; HTTPS port 443 is also needed. Check with your instructor if blocked. |
-
-Network details: [Microsoft's Event Hubs connectivity guide](https://learn.microsoft.com/en-us/azure/event-hubs/troubleshooting-guide).
-
 ## 8. Reflect on the design
 
 Discuss these before opening the suggested answers:
